@@ -1,1 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear Stability Simulator - Interactive Radioactivity Learning</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        :root {
+            --primary-bg: #0a0e27;
+            --secondary-bg: #141933;
+            --card-bg: #1a1f3a;
+            --accent-blue: #4a9eff;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #fbbf24;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3548;
+            --alpha-color: #ef4444;
+            --beta-minus-color: #3b82f6;
+            --beta-plus-color: #8b5cf6;
+            --electron-capture-color: #ec4899;
+            --stable-color: #10b981;
+            --shadow-glow: 0 0 20px rgba(74, 158, 255, 0.15);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, #0f1629 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles */
+        .background-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+            50% { transform: translate(100px, -100px) scale(1.5); opacity: 0.6; }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 2rem 0 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+        h1::before {
+            content: '⚛️ ';
+            background: none;
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: var(--accent-purple);
+            background-clip: unset;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--secondary-bg);
+            padding: 0.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-glow);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(74, 158, 255, 0.1);
+            color: var(--accent-blue);
+        }
+        
+        .tab-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Card styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card h2 {
+            color: var(--accent-blue);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .card h3 {
+            color: var(--accent-purple);
+            margin: 1.5rem 0 1rem;
+            font-size: 1.3rem;
+        }
+        
+        /* Notes Tab */
+        .notes-content {
+            line-height: 1.8;
+        }
+        
+        .notes-content p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .notes-content ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .notes-content li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+        
+        .decay-mode-box {
+            background: rgba(74, 158, 255, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        
+        .equation {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--secondary-bg);
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+            display: inline-block;
+            color: var(--accent-green);
+        }
+        
+        /* Settings Tab */
+        .settings-group {
+            margin-bottom: 2rem;
+        }
+        
+        .settings-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .settings-group input,
+        .settings-group select {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+        }
+        
+        .settings-group input[type="color"] {
+            height: 50px;
+            cursor: pointer;
+        }
+        
+        .settings-group input[type="range"] {
+            width: 100%;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Outfit', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--card-bg);
+            border-color: var(--accent-blue);
+        }
+        
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+        
+        /* Simulation Tab */
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+        }
+        
+        .canvas-container {
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        #stabilityCanvas {
+            width: 100%;
+            height: 600px;
+            border-radius: 8px;
+            background: var(--card-bg);
+            cursor: crosshair;
+        }
+        
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .control-section {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .control-section h3 {
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 0.6rem;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        /* Prediction Interface */
+        .prediction-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .prediction-btn {
+            padding: 0.8rem;
+            background: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .prediction-btn:hover {
+            border-color: var(--accent-blue);
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        .prediction-btn.selected {
+            border-color: var(--accent-blue);
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .prediction-btn.correct {
+            border-color: var(--accent-green);
+            background: var(--accent-green);
+            color: white;
+            animation: pulse 0.5s ease;
+        }
+        
+        .prediction-btn.incorrect {
+            border-color: var(--accent-red);
+            background: var(--accent-red);
+            color: white;
+            animation: shake 0.5s ease;
+        }
+        
+        /* Feedback Display */
+        .feedback {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .feedback.success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--accent-green);
+            color: var(--accent-green);
+            display: block;
+        }
+        
+        .feedback.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--accent-red);
+            color: var(--accent-red);
+            display: block;
+        }
+        
+        .feedback.info {
+            background: rgba(74, 158, 255, 0.2);
+            border: 2px solid var(--accent-blue);
+            color: var(--accent-blue);
+            display: block;
+        }
+        
+        /* Statistics */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-card {
+            background: var(--secondary-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+        
+        /* Legend */
+        .legend {
+            background: var(--secondary-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-upload input[type="file"] {
+            display: none;
+        }
+        
+        .file-upload-label {
+            display: block;
+            padding: 1rem;
+            background: var(--secondary-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-label:hover {
+            border-color: var(--accent-blue);
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .simulation-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .tab-nav {
+                flex-direction: column;
+            }
+        }
+        
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--secondary-bg);
+            color: var(--text-primary);
+            text-align: center;
+            border-radius: 6px;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Nuclide Info Display */
+        .nuclide-info {
+            background: var(--secondary-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .nuclide-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .nuclide-info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .nuclide-info-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .nuclide-info-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Particles -->
+    <div class="background-particles" id="particles"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1> Nuclear Stability Simulator</h1>
+            <p>Interactive learning tool for understanding radioactive decay and nuclear stability</p>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('simulation')">🎯 Simulation</button>
+            <button class="tab-btn" onclick="switchTab('notes')">📚 Notes</button>
+            <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
+            <button class="tab-btn" onclick="switchTab('stats')">📊 Statistics</button>
+        </div>
+        
+        <!-- Simulation Tab -->
+        <div id="simulation" class="tab-content active">
+            <div class="simulation-layout">
+                <!-- Canvas Area -->
+                <div>
+                    <div class="card">
+                        <h2>Band of Stability Plot</h2>
+                        <div class="canvas-container">
+                            <canvas id="stabilityCanvas"></canvas>
+                        </div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #10b981;"></div>
+                                <span>Stable Region (Band of Stability)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ef4444;"></div>
+                                <span>Alpha Decay (Z > 83)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #3b82f6;"></div>
+                                <span>Beta Minus (β⁻) - Excess Neutrons</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #8b5cf6;"></div>
+                                <span>Beta Plus (β⁺) / Electron Capture - Excess Protons</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controls Panel -->
+                <div class="controls-panel">
+                    <!-- Nuclide Input -->
+                    <div class="control-section">
+                        <h3>📍 Plot Nuclide</h3>
+                        <div class="input-group">
+                            <label>Atomic Number (Z - Protons)</label>
+                            <input type="number" id="protonInput" min="1" max="120" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label>Neutron Number (N)</label>
+                            <input type="number" id="neutronInput" min="0" max="180" placeholder="e.g., 8">
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="plotManualNuclide()">
+                                ✏️ Plot Nuclide
+                            </button>
+                            <button class="btn btn-secondary" onclick="generateRandomNuclide()">
+                                🎲 Random Nuclide
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearPlot()">
+                                🗑️ Clear Plot
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Nuclide Information -->
+                    <div class="control-section" id="nuclideInfoSection" style="display: none;">
+                        <h3>ℹ️ Nuclide Information</h3>
+                        <div class="nuclide-info">
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Element:</span>
+                                <span class="nuclide-info-value" id="elementName">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Notation:</span>
+                                <span class="nuclide-info-value" id="nuclideNotation">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Protons (Z):</span>
+                                <span class="nuclide-info-value" id="protonCount">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Neutrons (N):</span>
+                                <span class="nuclide-info-value" id="neutronCount">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Mass Number (A):</span>
+                                <span class="nuclide-info-value" id="massNumber">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">N:P Ratio:</span>
+                                <span class="nuclide-info-value" id="npRatio">-</span>
+                            </div>
+                            <div class="nuclide-info-row">
+                                <span class="nuclide-info-label">Status:</span>
+                                <span class="nuclide-info-value" id="stabilityStatus">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Prediction Interface -->
+                    <div class="control-section" id="predictionSection" style="display: none;">
+                        <h3>🎯 Predict Decay Mode</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                            What type of radioactive decay will this nuclide undergo?
+                        </p>
+                        <div class="prediction-options">
+                            <button class="prediction-btn" onclick="makePrediction('alpha')">
+                                🔴 Alpha (α)
+                            </button>
+                            <button class="prediction-btn" onclick="makePrediction('beta-minus')">
+                                🔵 Beta Minus (β⁻)
+                            </button>
+                            <button class="prediction-btn" onclick="makePrediction('beta-plus')">
+                                🟣 Beta Plus (β⁺)
+                            </button>
+                            <button class="prediction-btn" onclick="makePrediction('electron-capture')">
+                                🟣 Electron Capture
+                            </button>
+                            <button class="prediction-btn" onclick="makePrediction('stable')">
+                                🟢 Stable
+                            </button>
+                        </div>
+                        <div class="feedback" id="feedback"></div>
+                        <button class="btn btn-success" style="width: 100%; margin-top: 1rem;" onclick="showExplanation()">
+                            💡 Show Explanation
+                        </button>
+                    </div>
+                    
+                    <!-- Data Management -->
+                    <div class="control-section">
+                        <h3>📁 Data Management</h3>
+                        <div class="file-upload">
+                            <input type="file" id="datasetUpload" accept=".json,.csv" onchange="loadCustomDataset(event)">
+                            <label for="datasetUpload" class="file-upload-label">
+                                📤 Upload Custom Dataset<br>
+                                <small style="color: var(--text-secondary);">(JSON or CSV format)</small>
+                            </label>
+                        </div>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="downloadDataset()">
+                            💾 Download Current Dataset
+                        </button>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="resetToDefault()">
+                            🔄 Reset to Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes Tab -->
+        <div id="notes" class="tab-content">
+            <div class="card">
+                <h2>📚 Radioactivity Study Notes</h2>
+                
+                <div class="notes-content">
+                    <h3>Definition of Radioactivity</h3>
+                    <p>Radioactivity is a natural process through which unstable atomic nuclei undergo spontaneous transformations, emitting radiation in the form of particles or electromagnetic waves. This emission occurs in an attempt to achieve a more stable configuration.</p>
+                    
+                    <h3>Types of Radioactive Decay</h3>
+                    
+                    <div class="decay-mode-box">
+                        <h4 style="color: var(--alpha-color); margin-bottom: 0.5rem;">🔴 Alpha Decay (α)</h4>
+                        <p>An unstable nucleus emits an alpha particle (²⁴He nucleus: 2 protons + 2 neutrons). This reduces both the atomic number and mass number.</p>
+                        <div class="equation">²³⁸U → ²³⁴Th + ⁴He</div>
+                        <p style="margin-top: 0.5rem;"><strong>When it occurs:</strong> Elements with Z > 83 (beyond Bismuth)</p>
+                    </div>
+                    
+                    <div class="decay-mode-box">
+                        <h4 style="color: var(--beta-minus-color); margin-bottom: 0.5rem;">🔵 Beta Minus Decay (β⁻)</h4>
+                        <p>A neutron transforms into a proton, emitting an electron (beta particle) and an antineutrino. This increases the atomic number by 1 while maintaining the mass number.</p>
+                        <div class="equation">¹⁴C → ¹⁴N + β⁻ + ν̄</div>
+                        <p style="margin-top: 0.5rem;"><strong>When it occurs:</strong> Nuclides with excess neutrons (left of stability band)</p>
+                    </div>
+                    
+                    <div class="decay-mode-box">
+                        <h4 style="color: var(--beta-plus-color); margin-bottom: 0.5rem;">🟣 Beta Plus Decay (β⁺)</h4>
+                        <p>A proton transforms into a neutron, emitting a positron (positive electron) and a neutrino. This decreases the atomic number by 1 while maintaining the mass number.</p>
+                        <div class="equation">²²Na → ²²Ne + β⁺ + ν</div>
+                        <p style="margin-top: 0.5rem;"><strong>When it occurs:</strong> Nuclides with excess protons (right of stability band)</p>
+                    </div>
+                    
+                    <div class="decay-mode-box">
+                        <h4 style="color: var(--electron-capture-color); margin-bottom: 0.5rem;">🟣 Electron Capture</h4>
+                        <p>An inner shell electron is captured by the nucleus, combining with a proton to form a neutron and a neutrino. This also decreases the atomic number by 1.</p>
+                        <div class="equation">⁴⁰K + e⁻ → ⁴⁰Ar + ν</div>
+                        <p style="margin-top: 0.5rem;"><strong>When it occurs:</strong> Alternative to β⁺ for nuclides with excess protons</p>
+                    </div>
+                    
+                    <h3>Nuclear Band of Stability</h3>
+                    <p>The band of stability is a region on the N vs Z graph where stable nuclides exist. Nuclides within this band have an optimal neutron-to-proton ratio:</p>
+                    <ul>
+                        <li><strong>For Z ≤ 20:</strong> N:P ratio ≈ 1:1 (equal neutrons and protons)</li>
+                        <li><strong>For 20 < Z ≤ 83:</strong> N:P ratio approaches 1.5:1 (more neutrons needed)</li>
+                        <li><strong>For Z > 83:</strong> All nuclides are unstable and undergo radioactive decay</li>
+                    </ul>
+                    <p>Nuclides outside the band undergo radioactive decay to move toward stability.</p>
+                    
+                    <h3>Applications of Radioisotopes</h3>
+                    <ul>
+                        <li><strong>Medicine:</strong> Diagnostic imaging (Tc-99m), cancer treatment</li>
+                        <li><strong>Archaeology:</strong> Carbon-14 dating of organic materials</li>
+                        <li><strong>Agriculture:</strong> Studying nutrient uptake with P-32</li>
+                        <li><strong>Industry:</strong> Quality control, thickness measurement</li>
+                        <li><strong>Research:</strong> Tracing chemical pathways and reactions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="card">
+                <h2>⚙️ Simulation Settings</h2>
+                
+                <div class="settings-group">
+                    <label>Grid Display</label>
+                    <select id="gridDisplay" onchange="updateSettings()">
+                        <option value="major">Major Grid Lines Only</option>
+                        <option value="both">Major and Minor Grid Lines</option>
+                        <option value="none">No Grid Lines</option>
+                    </select>
+                </div>
+                
+                <div class="settings-group">
+                    <label>Point Size</label>
+                    <input type="range" id="pointSize" min="3" max="10" value="5" onchange="updateSettings()">
+                    <span id="pointSizeValue">5</span>
+                </div>
+                
+                <div class="settings-group">
+                    <label>Show Element Labels</label>
+                    <select id="showLabels" onchange="updateSettings()">
+                        <option value="hover">On Hover</option>
+                        <option value="always">Always</option>
+                        <option value="never">Never</option>
+                    </select>
+                </div>
+                
+                <div class="settings-group">
+                    <label>Stable Region Color</label>
+                    <input type="color" id="stableColor" value="#10b981" onchange="updateSettings()">
+                </div>
+                
+                <div class="settings-group">
+                    <label>Alpha Decay Region Color</label>
+                    <input type="color" id="alphaColor" value="#ef4444" onchange="updateSettings()">
+                </div>
+                
+                <div class="settings-group">
+                    <label>Beta Minus Region Color</label>
+                    <input type="color" id="betaMinusColor" value="#3b82f6" onchange="updateSettings()">
+                </div>
+                
+                <div class="settings-group">
+                    <label>Beta Plus Region Color</label>
+                    <input type="color" id="betaPlusColor" value="#8b5cf6" onchange="updateSettings()">
+                </div>
+                
+                <div class="settings-group">
+                    <label>Animation Speed</label>
+                    <select id="animationSpeed" onchange="updateSettings()">
+                        <option value="slow">Slow</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="fast">Fast</option>
+                        <option value="none">No Animation</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+                <button class="btn btn-secondary" onclick="resetSettings()">🔄 Reset to Default</button>
+            </div>
+        </div>
+        
+        <!-- Statistics Tab -->
+        <div id="stats" class="tab-content">
+            <div class="card">
+                <h2>📊 Learning Statistics</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalAttempts">0</div>
+                        <div class="stat-label">Total Attempts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="correctPredictions">0</div>
+                        <div class="stat-label">Correct</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="accuracyRate">0%</div>
+                        <div class="stat-label">Accuracy</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 2rem;">Decay Mode Breakdown</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--alpha-color);" id="alphaAttempts">0</div>
+                        <div class="stat-label">Alpha Decay</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--beta-minus-color);" id="betaMinusAttempts">0</div>
+                        <div class="stat-label">Beta Minus</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--beta-plus-color);" id="betaPlusAttempts">0</div>
+                        <div class="stat-label">Beta Plus / EC</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--stable-color);" id="stableAttempts">0</div>
+                        <div class="stat-label">Stable</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-danger" style="margin-top: 2rem;" onclick="resetStats()">🗑️ Reset Statistics</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // CONSTANTS AND DATA
+        // ============================================
+        
+        const ELEMENTS = {
+            1: 'H', 2: 'He', 3: 'Li', 4: 'Be', 5: 'B', 6: 'C', 7: 'N', 8: 'O', 9: 'F', 10: 'Ne',
+            11: 'Na', 12: 'Mg', 13: 'Al', 14: 'Si', 15: 'P', 16: 'S', 17: 'Cl', 18: 'Ar', 19: 'K', 20: 'Ca',
+            21: 'Sc', 22: 'Ti', 23: 'V', 24: 'Cr', 25: 'Mn', 26: 'Fe', 27: 'Co', 28: 'Ni', 29: 'Cu', 30: 'Zn',
+            31: 'Ga', 32: 'Ge', 33: 'As', 34: 'Se', 35: 'Br', 36: 'Kr', 37: 'Rb', 38: 'Sr', 39: 'Y', 40: 'Zr',
+            41: 'Nb', 42: 'Mo', 43: 'Tc', 44: 'Ru', 45: 'Rh', 46: 'Pd', 47: 'Ag', 48: 'Cd', 49: 'In', 50: 'Sn',
+            51: 'Sb', 52: 'Te', 53: 'I', 54: 'Xe', 55: 'Cs', 56: 'Ba', 57: 'La', 58: 'Ce', 59: 'Pr', 60: 'Nd',
+            61: 'Pm', 62: 'Sm', 63: 'Eu', 64: 'Gd', 65: 'Tb', 66: 'Dy', 67: 'Ho', 68: 'Er', 69: 'Tm', 70: 'Yb',
+            71: 'Lu', 72: 'Hf', 73: 'Ta', 74: 'W', 75: 'Re', 76: 'Os', 77: 'Ir', 78: 'Pt', 79: 'Au', 80: 'Hg',
+            81: 'Tl', 82: 'Pb', 83: 'Bi', 84: 'Po', 85: 'At', 86: 'Rn', 87: 'Fr', 88: 'Ra', 89: 'Ac', 90: 'Th',
+            91: 'Pa', 92: 'U', 93: 'Np', 94: 'Pu', 95: 'Am', 96: 'Cm', 97: 'Bk', 98: 'Cf', 99: 'Es', 100: 'Fm',
+            101: 'Md', 102: 'No', 103: 'Lr', 104: 'Rf', 105: 'Db', 106: 'Sg', 107: 'Bh', 108: 'Hs', 109: 'Mt', 110: 'Ds',
+            111: 'Rg', 112: 'Cn', 113: 'Nh', 114: 'Fl', 115: 'Mc', 116: 'Lv', 117: 'Ts', 118: 'Og'
+        };
+        
+        // Default dataset of stable nuclides (simplified)
+        let stableNuclides = [];
+        
+        // Generate default stable nuclides dataset
+        function generateDefaultDataset() {
+            const data = [];
+            // For elements 1-20, use N:P ratio of ~1:1
+            for (let z = 1; z <= 20; z++) {
+                const n = z; // Simplified - actual stable isotopes vary
+                data.push({ z, n });
+            }
+            // For elements 21-83, use N:P ratio approaching 1.5:1
+            for (let z = 21; z <= 83; z++) {
+                const n = Math.round(z * 1.3); // Simplified approximation
+                data.push({ z, n });
+            }
+            return data;
+        }
+        
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        
+        let currentNuclide = null;
+        let userPrediction = null;
+        let correctAnswer = null;
+        let stats = {
+            total: 0,
+            correct: 0,
+            alpha: 0,
+            betaMinus: 0,
+            betaPlus: 0,
+            stable: 0
+        };
+        
+        let settings = {
+            gridDisplay: 'major',
+            pointSize: 5,
+            showLabels: 'hover',
+            stableColor: '#10b981',
+            alphaColor: '#ef4444',
+            betaMinusColor: '#3b82f6',
+            betaPlusColor: '#8b5cf6',
+            animationSpeed: 'medium'
+        };
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            stableNuclides = generateDefaultDataset();
+            initCanvas();
+            createBackgroundParticles();
+            loadStats();
+            loadSettings();
+            drawStabilityPlot();
+        });
+        
+        // ============================================
+        // TAB MANAGEMENT
+        // ============================================
+        
+        function switchTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Redraw canvas if switching to simulation
+            if (tabName === 'simulation') {
+                setTimeout(() => drawStabilityPlot(), 100);
+            }
+        }
+        
+        // ============================================
+        // CANVAS SETUP AND DRAWING
+        // ============================================
+        
+        let canvas, ctx;
+        let canvasWidth, canvasHeight;
+        let padding = 60;
+        let maxZ = 100;
+        let maxN = 150;
+        
+        function initCanvas() {
+            canvas = document.getElementById('stabilityCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            const container = canvas.parentElement;
+            canvasWidth = container.clientWidth - 32; // Account for padding
+            canvasHeight = 600;
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            // Add click event
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousemove', handleCanvasHover);
+        }
+        
+        function drawStabilityPlot() {
+            // Clear canvas
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card-bg');
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw regions
+            drawStabilityRegions();
+            
+            // Draw grid
+            if (settings.gridDisplay !== 'none') {
+                drawGrid();
+            }
+            
+            // Draw reference lines
+            drawReferenceLines();
+            
+            // Draw axes
+            drawAxes();
+            
+            // Draw current nuclide if exists
+            if (currentNuclide) {
+                drawNuclide(currentNuclide.z, currentNuclide.n, '#fbbf24', 8);
+            }
+        }
+        
+        function drawStabilityRegions() {
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            // Draw semi-transparent regions
+            ctx.globalAlpha = 0.2;
+            
+            // Stable band (simplified as region between two lines)
+            ctx.fillStyle = settings.stableColor;
+            ctx.beginPath();
+            for (let z = 0; z <= maxZ; z++) {
+                const x = padding + (z / maxZ) * plotWidth;
+                let n1, n2;
+                
+                if (z <= 20) {
+                    n1 = z * 0.9;
+                    n2 = z * 1.1;
+                } else if (z <= 83) {
+                    n1 = z * 1.2;
+                    n2 = z * 1.6;
+                } else {
+                    continue; // No stable region beyond 83
+                }
+                
+                const y1 = canvasHeight - padding - (n1 / maxN) * plotHeight;
+                const y2 = canvasHeight - padding - (n2 / maxN) * plotHeight;
+                
+                if (z === 0) {
+                    ctx.moveTo(x, y1);
+                } else {
+                    ctx.lineTo(x, y1);
+                }
+            }
+            for (let z = maxZ; z >= 0; z--) {
+                const x = padding + (z / maxZ) * plotWidth;
+                let n2;
+                
+                if (z <= 20) {
+                    n2 = z * 1.1;
+                } else if (z <= 83) {
+                    n2 = z * 1.6;
+                } else {
+                    n2 = z * 1.6;
+                }
+                
+                const y2 = canvasHeight - padding - (n2 / maxN) * plotHeight;
+                ctx.lineTo(x, y2);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.globalAlpha = 1.0;
+        }
+        
+        function drawGrid() {
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let z = 0; z <= maxZ; z += 10) {
+                const x = padding + (z / maxZ) * plotWidth;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, canvasHeight - padding);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let n = 0; n <= maxN; n += 10) {
+                const y = canvasHeight - padding - (n / maxN) * plotHeight;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvasWidth - padding, y);
+                ctx.stroke();
+            }
+        }
+        
+        function drawReferenceLines() {
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            // N:P = 1:1 line (red)
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for (let z = 0; z <= Math.min(maxZ, maxN); z += 0.5) {
+                const n = z;
+                const x = padding + (z / maxZ) * plotWidth;
+                const y = canvasHeight - padding - (n / maxN) * plotHeight;
+                if (z === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // N:P = 1.5:1 line (green)
+            ctx.strokeStyle = '#10b981';
+            ctx.beginPath();
+            for (let z = 0; z <= maxZ; z += 0.5) {
+                const n = z * 1.5;
+                if (n > maxN) break;
+                const x = padding + (z / maxZ) * plotWidth;
+                const y = canvasHeight - padding - (n / maxN) * plotHeight;
+                if (z === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Z = 83 line (bismuth limit)
+            ctx.strokeStyle = '#fbbf24';
+            const z83x = padding + (83 / maxZ) * plotWidth;
+            ctx.beginPath();
+            ctx.moveTo(z83x, padding);
+            ctx.lineTo(z83x, canvasHeight - padding);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+        }
+        
+        function drawAxes() {
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2;
+            ctx.font = '14px Outfit';
+            ctx.fillStyle = '#94a3b8';
+            
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(padding, canvasHeight - padding);
+            ctx.lineTo(canvasWidth - padding, canvasHeight - padding);
+            ctx.stroke();
+            
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvasHeight - padding);
+            ctx.stroke();
+            
+            // X-axis label
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.fillText('Atomic Number (Z - Protons)', canvasWidth / 2, canvasHeight - 10);
+            
+            // Y-axis label
+            ctx.translate(20, canvasHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Neutron Number (N)', 0, 0);
+            ctx.restore();
+            
+            // Tick marks and labels
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let z = 0; z <= maxZ; z += 20) {
+                const x = padding + (z / maxZ) * plotWidth;
+                ctx.fillText(z.toString(), x, canvasHeight - padding + 5);
+            }
+            
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let n = 0; n <= maxN; n += 20) {
+                const y = canvasHeight - padding - (n / maxN) * plotHeight;
+                ctx.fillText(n.toString(), padding - 10, y);
+            }
+        }
+        
+        function drawNuclide(z, n, color, size) {
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            const x = padding + (z / maxZ) * plotWidth;
+            const y = canvasHeight - padding - (n / maxN) * plotHeight;
+            
+            // Draw glow effect
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            
+            // Draw element label if enabled
+            if (settings.showLabels === 'always') {
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '12px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(ELEMENTS[z] || '?', x, y - size - 10);
+            }
+        }
+        
+        // ============================================
+        // CANVAS INTERACTION
+        // ============================================
+        
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Convert to Z and N
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            const z = Math.round(((x - padding) / plotWidth) * maxZ);
+            const n = Math.round(((canvasHeight - padding - y) / plotHeight) * maxN);
+            
+            if (z >= 1 && z <= maxZ && n >= 0 && n <= maxN) {
+                plotNuclide(z, n);
+            }
+        }
+        
+        function handleCanvasHover(event) {
+            if (settings.showLabels !== 'hover') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Convert to Z and N
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+            
+            const z = Math.round(((x - padding) / plotWidth) * maxZ);
+            const n = Math.round(((canvasHeight - padding - y) / plotHeight) * maxN);
+            
+            // Check if we're near the current nuclide
+            if (currentNuclide && Math.abs(z - currentNuclide.z) < 2 && Math.abs(n - currentNuclide.n) < 2) {
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+        
+        // ============================================
+        // NUCLIDE OPERATIONS
+        // ============================================
+        
+        function plotManualNuclide() {
+            const z = parseInt(document.getElementById('protonInput').value);
+            const n = parseInt(document.getElementById('neutronInput').value);
+            
+            if (isNaN(z) || isNaN(n) || z < 1 || n < 0) {
+                showFeedback('Please enter valid numbers for protons and neutrons.', 'error');
+                return;
+            }
+            
+            plotNuclide(z, n);
+        }
+        
+        function generateRandomNuclide() {
+            const z = Math.floor(Math.random() * 90) + 1; // 1 to 90
+            const n = Math.floor(Math.random() * 130) + z * 0.8; // Variable N
+            plotNuclide(z, n);
+        }
+        
+        function plotNuclide(z, n) {
+            currentNuclide = { z, n };
+            userPrediction = null;
+            
+            // Update display
+            document.getElementById('protonInput').value = z;
+            document.getElementById('neutronInput').value = n;
+            
+            // Show nuclide info
+            displayNuclideInfo(z, n);
+            
+            // Determine correct decay mode
+            correctAnswer = determineDecayMode(z, n);
+            
+            // Show prediction section
+            document.getElementById('predictionSection').style.display = 'block';
+            
+            // Reset prediction buttons
+            const buttons = document.querySelectorAll('.prediction-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('selected', 'correct', 'incorrect');
+            });
+            
+            // Hide feedback
+            document.getElementById('feedback').style.display = 'none';
+            
+            // Redraw plot
+            drawStabilityPlot();
+        }
+        
+        function displayNuclideInfo(z, n) {
+            const element = ELEMENTS[z] || 'Unknown';
+            const massNumber = z + n;
+            const npRatio = (n / z).toFixed(3);
+            
+            document.getElementById('elementName').textContent = element;
+            document.getElementById('nuclideNotation').textContent = `${massNumber}${element}`;
+            document.getElementById('protonCount').textContent = z;
+            document.getElementById('neutronCount').textContent = n;
+            document.getElementById('massNumber').textContent = massNumber;
+            document.getElementById('npRatio').textContent = npRatio;
+            
+            const stability = determineDecayMode(z, n);
+            let statusText = '';
+            let statusColor = '';
+            
+            switch(stability) {
+                case 'stable':
+                    statusText = '✅ Stable';
+                    statusColor = 'var(--stable-color)';
+                    break;
+                case 'alpha':
+                    statusText = '❌ Unstable (α decay)';
+                    statusColor = 'var(--alpha-color)';
+                    break;
+                case 'beta-minus':
+                    statusText = '❌ Unstable (β⁻ decay)';
+                    statusColor = 'var(--beta-minus-color)';
+                    break;
+                case 'beta-plus':
+                case 'electron-capture':
+                    statusText = '❌ Unstable (β⁺/EC)';
+                    statusColor = 'var(--beta-plus-color)';
+                    break;
+            }
+            
+            const statusElement = document.getElementById('stabilityStatus');
+            statusElement.textContent = statusText;
+            statusElement.style.color = statusColor;
+            
+            document.getElementById('nuclideInfoSection').style.display = 'block';
+        }
+        
+        function determineDecayMode(z, n) {
+            const npRatio = n / z;
+            
+            // All elements with Z > 83 undergo alpha decay
+            if (z > 83) {
+                return 'alpha';
+            }
+            
+            // For Z <= 20, stable ratio is ~1:1
+            if (z <= 20) {
+                if (npRatio >= 0.95 && npRatio <= 1.05) {
+                    return 'stable';
+                } else if (npRatio > 1.05) {
+                    return 'beta-minus'; // Excess neutrons
+                } else {
+                    return 'beta-plus'; // Excess protons
+                }
+            }
+            
+            // For 20 < Z <= 83, stable ratio approaches 1.5:1
+            const idealRatio = 1.3 + (z - 20) * 0.005; // Gradual increase
+            
+            if (npRatio >= idealRatio * 0.95 && npRatio <= idealRatio * 1.05) {
+                return 'stable';
+            } else if (npRatio > idealRatio * 1.05) {
+                return 'beta-minus'; // Too many neutrons
+            } else {
+                return 'beta-plus'; // Too many protons (could also be electron capture)
+            }
+        }
+        
+        function clearPlot() {
+            currentNuclide = null;
+            userPrediction = null;
+            correctAnswer = null;
+            
+            document.getElementById('nuclideInfoSection').style.display = 'none';
+            document.getElementById('predictionSection').style.display = 'none';
+            document.getElementById('protonInput').value = '';
+            document.getElementById('neutronInput').value = '';
+            
+            drawStabilityPlot();
+        }
+        
+        // ============================================
+        // PREDICTION SYSTEM
+        // ============================================
+        
+        function makePrediction(prediction) {
+            if (!currentNuclide) return;
+            
+            userPrediction = prediction;
+            stats.total++;
+            
+            // Update UI
+            const buttons = document.querySelectorAll('.prediction-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('selected', 'correct', 'incorrect');
+            });
+            
+            event.target.classList.add('selected');
+            
+            // Check if correct
+            let isCorrect = false;
+            
+            if (prediction === correctAnswer) {
+                isCorrect = true;
+            } else if ((prediction === 'beta-plus' || prediction === 'electron-capture') && 
+                       (correctAnswer === 'beta-plus' || correctAnswer === 'electron-capture')) {
+                isCorrect = true; // Accept either for excess protons
+            }
+            
+            if (isCorrect) {
+                event.target.classList.add('correct');
+                stats.correct++;
+                showFeedback('🎉 Correct! Well done!', 'success');
+            } else {
+                event.target.classList.add('incorrect');
+                showFeedback(`❌ Incorrect. The correct answer is ${getDecayModeName(correctAnswer)}.`, 'error');
+            }
+            
+            // Update stats by type
+            switch(correctAnswer) {
+                case 'alpha': stats.alpha++; break;
+                case 'beta-minus': stats.betaMinus++; break;
+                case 'beta-plus':
+                case 'electron-capture': stats.betaPlus++; break;
+                case 'stable': stats.stable++; break;
+            }
+            
+            saveStats();
+            updateStatsDisplay();
+        }
+        
+        function getDecayModeName(mode) {
+            switch(mode) {
+                case 'alpha': return 'Alpha Decay (α)';
+                case 'beta-minus': return 'Beta Minus (β⁻)';
+                case 'beta-plus': return 'Beta Plus (β⁺) or Electron Capture';
+                case 'electron-capture': return 'Electron Capture';
+                case 'stable': return 'Stable';
+                default: return 'Unknown';
+            }
+        }
+        
+        function showExplanation() {
+            if (!currentNuclide || !correctAnswer) return;
+            
+            const { z, n } = currentNuclide;
+            const npRatio = (n / z).toFixed(3);
+            let explanation = '';
+            
+            if (z > 83) {
+                explanation = `⚡ All elements with atomic number Z > 83 (beyond Bismuth) are unstable and undergo alpha decay. Your nuclide has Z = ${z}, so it emits an alpha particle (⁴He) to reduce both its atomic and mass numbers.`;
+            } else if (correctAnswer === 'stable') {
+                if (z <= 20) {
+                    explanation = `✅ For elements with Z ≤ 20, a stable N:P ratio is approximately 1:1. Your nuclide has N:P = ${npRatio}, which falls within the stable range.`;
+                } else {
+                    explanation = `✅ For elements with 20 < Z ≤ 83, the stable N:P ratio gradually increases toward 1.5:1. Your nuclide with Z = ${z} and N:P = ${npRatio} falls within the band of stability.`;
+                }
+            } else if (correctAnswer === 'beta-minus') {
+                explanation = `⚡ Your nuclide has N:P = ${npRatio}, indicating excess neutrons (left of the stability band). It will undergo beta minus decay (β⁻), converting a neutron into a proton and emitting an electron, thus increasing Z by 1.`;
+            } else if (correctAnswer === 'beta-plus' || correctAnswer === 'electron-capture') {
+                explanation = `⚡ Your nuclide has N:P = ${npRatio}, indicating excess protons (right of the stability band). It will undergo beta plus decay (β⁺) or electron capture, converting a proton into a neutron, thus decreasing Z by 1.`;
+            }
+            
+            showFeedback(explanation, 'info');
+        }
+        
+        function showFeedback(message, type) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.className = 'feedback ' + type;
+            feedback.style.display = 'block';
+        }
+        
+        // ============================================
+        // DATA MANAGEMENT
+        // ============================================
+        
+        function loadCustomDataset(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let data;
+                    
+                    if (file.name.endsWith('.json')) {
+                        data = JSON.parse(content);
+                    } else if (file.name.endsWith('.csv')) {
+                        data = parseCSV(content);
+                    } else {
+                        throw new Error('Unsupported file format');
+                    }
+                    
+                    stableNuclides = data;
+                    drawStabilityPlot();
+                    showFeedback('✅ Dataset loaded successfully!', 'success');
+                } catch (error) {
+                    showFeedback('❌ Error loading dataset: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) { // Skip header
+                const [z, n] = lines[i].split(',').map(Number);
+                if (!isNaN(z) && !isNaN(n)) {
+                    data.push({ z, n });
+                }
+            }
+            
+            return data;
+        }
+        
+        function downloadDataset() {
+            const data = JSON.stringify(stableNuclides, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'stability-dataset.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function resetToDefault() {
+            if (confirm('Are you sure you want to reset to the default dataset?')) {
+                stableNuclides = generateDefaultDataset();
+                drawStabilityPlot();
+                showFeedback('✅ Dataset reset to default.', 'success');
+            }
+        }
+        
+        // ============================================
+        // SETTINGS MANAGEMENT
+        // ============================================
+        
+        function updateSettings() {
+            settings.gridDisplay = document.getElementById('gridDisplay').value;
+            settings.pointSize = parseInt(document.getElementById('pointSize').value);
+            settings.showLabels = document.getElementById('showLabels').value;
+            settings.stableColor = document.getElementById('stableColor').value;
+            settings.alphaColor = document.getElementById('alphaColor').value;
+            settings.betaMinusColor = document.getElementById('betaMinusColor').value;
+            settings.betaPlusColor = document.getElementById('betaPlusColor').value;
+            settings.animationSpeed = document.getElementById('animationSpeed').value;
+            
+            document.getElementById('pointSizeValue').textContent = settings.pointSize;
+            
+            drawStabilityPlot();
+        }
+        
+        function saveSettings() {
+            updateSettings();
+            localStorage.setItem('stabilitySimulatorSettings', JSON.stringify(settings));
+            showFeedback('✅ Settings saved successfully!', 'success');
+        }
+        
+        function loadSettings() {
+            const saved = localStorage.getItem('stabilitySimulatorSettings');
+            if (saved) {
+                settings = JSON.parse(saved);
+                
+                document.getElementById('gridDisplay').value = settings.gridDisplay;
+                document.getElementById('pointSize').value = settings.pointSize;
+                document.getElementById('pointSizeValue').textContent = settings.pointSize;
+                document.getElementById('showLabels').value = settings.showLabels;
+                document.getElementById('stableColor').value = settings.stableColor;
+                document.getElementById('alphaColor').value = settings.alphaColor;
+                document.getElementById('betaMinusColor').value = settings.betaMinusColor;
+                document.getElementById('betaPlusColor').value = settings.betaPlusColor;
+                document.getElementById('animationSpeed').value = settings.animationSpeed;
+            }
+        }
+        
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to default?')) {
+                settings = {
+                    gridDisplay: 'major',
+                    pointSize: 5,
+                    showLabels: 'hover',
+                    stableColor: '#10b981',
+                    alphaColor: '#ef4444',
+                    betaMinusColor: '#3b82f6',
+                    betaPlusColor: '#8b5cf6',
+                    animationSpeed: 'medium'
+                };
+                
+                loadSettings();
+                drawStabilityPlot();
+                showFeedback('✅ Settings reset to default.', 'success');
+            }
+        }
+        
+        // ============================================
+        // STATISTICS
+        // ============================================
+        
+        function updateStatsDisplay() {
+            document.getElementById('totalAttempts').textContent = stats.total;
+            document.getElementById('correctPredictions').textContent = stats.correct;
+            
+            const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+            document.getElementById('accuracyRate').textContent = accuracy + '%';
+            
+            document.getElementById('alphaAttempts').textContent = stats.alpha;
+            document.getElementById('betaMinusAttempts').textContent = stats.betaMinus;
+            document.getElementById('betaPlusAttempts').textContent = stats.betaPlus;
+            document.getElementById('stableAttempts').textContent = stats.stable;
+        }
+        
+        function saveStats() {
+            localStorage.setItem('stabilitySimulatorStats', JSON.stringify(stats));
+        }
+        
+        function loadStats() {
+            const saved = localStorage.getItem('stabilitySimulatorStats');
+            if (saved) {
+                stats = JSON.parse(saved);
+                updateStatsDisplay();
+            }
+        }
+        
+        function resetStats() {
+            if (confirm('Are you sure you want to reset all statistics?')) {
+                stats = {
+                    total: 0,
+                    correct: 0,
+                    alpha: 0,
+                    betaMinus: 0,
+                    betaPlus: 0,
+                    stable: 0
+                };
+                saveStats();
+                updateStatsDisplay();
+                showFeedback('✅ Statistics reset.', 'success');
+            }
+        }
+        
+        // ============================================
+        // BACKGROUND EFFECTS
+        // ============================================
+        
+        function createBackgroundParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // ============================================
+        // WINDOW RESIZE
+        // ============================================
+        
+        window.addEventListener('resize', () => {
+            initCanvas();
+            drawStabilityPlot();
+        });
+    </script>
+</body>
+</html>
 
