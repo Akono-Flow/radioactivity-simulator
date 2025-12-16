@@ -26,6 +26,37 @@
             --stable-color: #10b981;
             --shadow-glow: 0 0 20px rgba(74, 158, 255, 0.15);
         }
+
+        .back-to-dashboard {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--dark-bg);
+        color: var(--text-light);
+        border: 2px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+
+    .back-to-dashboard:hover {
+        transform: translateY(-2px);
+        background-color: var(--primary-color);
+        color: var(--text-light);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+.back-to-dashboard svg {
+    width: 20px;
+    height: 20px;
+}
         
         * {
             margin: 0;
